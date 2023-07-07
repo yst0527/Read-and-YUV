@@ -79,7 +79,7 @@ int main()
     // printf("Enter %s\n", __func__);
     int nFrame,pic_size;
     int ret = 0;
-    FILE * in,*out, *out_y, *reshape1_y, *reshape2_y, *reshape1_yuv; //获取输入序列
+    FILE * in,*out, *out_y, *reshape1_y, *reshape2_y, *reshape1_yuv, *reshape2_yuv; //获取输入序列
 
     in = fopen("D:\\yst_workplace\\yuv_classTest\\sample_0.yuv","rb+"); //rb 表示读写一个二进制的文件
     out = fopen("D:\\yst_workplace\\yuv_classTest\\copy_sample_0.yuv","wb+"); //用a会导致文件变大，还是用w+
@@ -129,28 +129,58 @@ int main()
 
 
 /*3、拼接YUV并写入新文件*/    
+    /*3-1横向拼接*/
     reshape1_yuv = fopen("D:\\yst_workplace\\yuv_classTest\\reshape1_yuv.yuv","wb+"); //
     char* re1yuv_buffer = (char*)malloc(pic_size*2);
-    int t = 0;
     for(int i = 0; i<pic_size; i++) {//IMG_SIZE_1080P换成了pic_size
         *re1yuv_buffer = *data_buffer;
         *(re1yuv_buffer + 1920) = *data_buffer;//横向拼接，新图像第0和第1920个像素映射旧图像的第0个像素，以此类推
         data_buffer++;
         re1yuv_buffer++;
-        t++;
         if (i%1920 == 1919) {
           re1yuv_buffer += 1920;//完成旧图像的一行拼接后，指针走到下一行
-          t += 1920;
         }
     }
 
     data_buffer -= pic_size;
     re1yuv_buffer -= pic_size*2;
 
-    fwrite(re1yuv_buffer, 1, pic_size*2, reshape1_yuv);//Y分量图像横向拼接 
+    fwrite(re1yuv_buffer, 1, pic_size*2, reshape1_yuv);//Y分量图像横向拼接
 
+    /*3-2纵向拼接*/
+    reshape2_yuv = fopen("D:\\yst_workplace\\yuv_classTest\\reshape2_yuv.yuv","wb+"); //
+    char* re2yuv_buffer = (char*)malloc(pic_size*2);
+    int t = 0;
+    for(int i = 0; i<IMG_SIZE_1080P; i++) {//IMG_SIZE_1080P换成了pic_size
+        *re2yuv_buffer = *data_buffer;
+        *(re2yuv_buffer + IMG_SIZE_1080P) = *data_buffer;//纵拼接，先拼接Y分量
+        data_buffer++;
+        re2yuv_buffer++;
+        t++;
+    }
+    re2yuv_buffer += IMG_SIZE_1080P;
+    t += IMG_SIZE_1080P;
+    for(int i = IMG_SIZE_1080P; i<pic_size; i++) {//IMG_SIZE_1080P换成了pic_size
+        *re2yuv_buffer = *data_buffer;
+        *(re2yuv_buffer + pic_size - IMG_SIZE_1080P) = *data_buffer;//纵拼接，再拼接UV分量
+        data_buffer++;
+        re2yuv_buffer++;
+        t++;
+    }
+    re2yuv_buffer += (pic_size -IMG_SIZE_1080P);
+    t += (pic_size -IMG_SIZE_1080P);
+
+    data_buffer -= pic_size;
+    re2yuv_buffer -= pic_size*2;
+
+    fwrite(re2yuv_buffer, 1, pic_size*2, reshape2_yuv);//Y分量图像横向拼接 
+
+/*释放内存*/
     free(re1y_buffer);
     re1y_buffer = NULL;
+
+    free(re2yuv_buffer);
+    re2yuv_buffer = NULL;
 
     free(re1yuv_buffer);
     re1yuv_buffer = NULL;
@@ -163,7 +193,8 @@ int main()
     fclose(out_y);
     fclose(reshape1_y);
     fclose(reshape1_yuv);
+    fclose(reshape2_yuv);
 
-    // system("pause");
+    system("pause");
     return 0;
 }
